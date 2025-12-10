@@ -157,6 +157,38 @@ class SignalVisualizer:
         self.robot_plots: List[Line2D] = []
         self.station_plot: PatchCollection = None
 
+    def plot(
+        self,
+        paths: List[Path],
+        file_name: str = "final.png",
+        show_robots: bool = True
+    ) -> None:
+        fig, ax = self._prepare_ax()
+
+        robot_positions = [
+            (path[-1].x, path[-1].y)
+            for path in paths
+        ]
+
+        if show_robots:
+            robot_colors = cm.get_cmap("tab20", len(paths))
+            for i, pos in enumerate(robot_positions):
+                ax.plot(
+                    pos[0], pos[1], 
+                    marker='o', markersize=8, 
+                    color=robot_colors(i)
+                )
+
+        Z = self._compute_signal(robot_positions)
+        self.heatmap.set_array(Z.ravel())
+
+        if not file_name.endswith(".png"):
+            file_name = file_name + ".png"
+
+        plt.savefig(file_name, dpi=200)
+        print(f"[INFO] Last frame saved to {file_name}")
+        plt.close(fig)
+
     def animate(
         self, 
         paths: List[Path], 
@@ -203,9 +235,8 @@ class SignalVisualizer:
         )
         
         if file_name is not None:
-            ani.save(file_name, writer='pillow', 
-                    fps=int(1000 / interval), dpi=150)
-            print(f"Animation saved to {file_name}")
+            ani.save(file_name, writer='pillow', fps=int(1000 / interval), dpi=150)
+            print(f"[INFO] Animation saved to {file_name}")
         
         plt.show()
     
@@ -316,7 +347,7 @@ class SignalVisualizer:
         return np.clip(Z_total, 0, self.MAX_SIGNAL_DISPLAY)
     
     def _prepare_ax(self) -> Tuple[plt.Figure, plt.Axes]:
-        fig, ax = plt.subplots(figsize=(9, 8))
+        fig, ax = plt.subplots(figsize=(7, 7))
         
         for poly in self.env.obstacles:
             ax.add_patch(Polygon(poly, closed=True, facecolor='gray', alpha=0.6, zorder=8))
